@@ -1,10 +1,10 @@
 package com.write.write.service;
 
 import com.write.write.dto.WritingRequest;
+import com.write.write.entity.UserAccount;
 import com.write.write.entity.WritingRecord;
 import com.write.write.repository.WritingRecordRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -13,13 +13,12 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 import java.util.Map;
 
-@Slf4j // 自动生成日志对象 log
 @Service
 @RequiredArgsConstructor
 public class WritingService {
 
     private final RestTemplate restTemplate;
-    private final WritingRecordRepository repository;
+    private final WritingRecordRepository recordRepository;
 
     @Value("${ai.apiUrl}")
     private String apiUrl;
@@ -27,31 +26,23 @@ public class WritingService {
     @Value("${ai.apiKey}")
     private String apiKey;
 
-    @Value("${ai.model}")
-    private String model;
-
-
-    public String handleRequest(WritingRequest req) {
+    public String handleRequest(WritingRequest req, UserAccount user) {
         String prompt = buildPrompt(req);
-        try {
-            String aiResponse = callAI(prompt);
+        String aiResponse = callAI(prompt);
 
-            // ✅ 使用 Lombok builder 构建实体对象
-            WritingRecord record = WritingRecord.builder()
-                    .inputType(getInputType(req))
-                    .inputContent(prompt)
-                    .aiResponse(aiResponse)
-                    .build();
+        WritingRecord record = WritingRecord.builder()
+                .user(user)
+                .inputType(getInputType(req))
+                .inputContent(prompt)
+                .aiResponse(aiResponse)
+                .build();
+        recordRepository.save(record);
 
-            repository.save(record);
+        return aiResponse;
+    }
 
-            log.info("保存写作记录成功: type={}, id={}", record.getInputType(), record.getId());
-
-            return aiResponse;
-        } catch (Exception e) {
-            log.error("AI 调用失败: {}", e.getMessage(), e);
-            return "AI 服务暂时不可用，请稍后重试。（错误：" + e.getMessage() + "）";
-        }
+    public List<WritingRecord> getHistory(UserAccount user) {
+        return recordRepository.findByUserOrderByCreatedAtDesc(user);
     }
 
     private String callAI(String prompt) {
@@ -60,7 +51,7 @@ public class WritingService {
         headers.setBearerAuth(apiKey);
 
         Map<String, Object> payload = Map.of(
-                "model", model,
+                "model", "deepseek-ai/DeepSeek-V2.5",
                 "messages", List.of(
                         Map.of("role", "system", "content", "你是作文指导老师，擅长五感训练法"),
                         Map.of("role", "user", "content", prompt)
@@ -69,10 +60,6 @@ public class WritingService {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
         ResponseEntity<Map> response = restTemplate.postForEntity(apiUrl, entity, Map.class);
-
-        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-            throw new RuntimeException("AI 调用失败，HTTP状态：" + response.getStatusCode());
-        }
 
         Map<String, Object> choice = ((List<Map<String, Object>>) response.getBody().get("choices")).get(0);
         Map<String, Object> message = (Map<String, Object>) choice.get("message");

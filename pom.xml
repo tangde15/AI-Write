@@ -55,6 +55,12 @@
             <version>1.18.38</version>
             <scope>provided</scope>
         </dependency>
+        <!-- BCrypt 密码加密依赖（不依赖 Spring Security） -->
+        <dependency>
+            <groupId>org.mindrot</groupId>
+            <artifactId>jbcrypt</artifactId>
+            <version>0.4</version> <!-- 最新稳定版，可自行更新 -->
+        </dependency>
     </dependencies>
 
     <build>

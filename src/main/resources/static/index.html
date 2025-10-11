@@ -9,32 +9,116 @@
         .container { max-width: 650px; margin: auto; background: #fff; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
         textarea, input { width: 100%; margin: 0.5rem 0; padding: 0.5rem; border-radius: 5px; border: 1px solid #ccc; }
         button { padding: 0.6rem 1.2rem; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        button:hover { background: #45a049; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        button:hover:enabled { background: #45a049; }
         .result { margin-top: 1rem; padding: 1rem; background: #eef; border-radius: 8px; white-space: pre-wrap; }
         .loading { display: none; text-align: center; font-size: 1rem; margin-top: 1rem; }
         .loading::after { content: '⏳ 正在生成AI回复...'; color: #555; }
         .section { margin-bottom: 1rem; }
         .section h3 { margin-bottom: 0.5rem; color: #333; }
+        .history { background: #f9f9f9; padding: 0.5rem; border-radius: 6px; margin-top: 1rem; }
+        .status { font-weight: bold; margin-bottom: 0.5rem; color: #007bff; }
+        .user-info {
+            text-align: right;
+            margin-bottom: 1rem;
+        }
+        /* 登录状态下隐藏登录表单元素 */
+        .logged-in #username,
+        .logged-in #password,
+        .logged-in #register-btn,
+        .logged-in #login-btn {
+            display: none;
+        }
     </style>
 </head>
 <body>
-<div class="container">
+<div class="container" id="main-container">
     <h2>AI 五感作文训练</h2>
-    <label>作文题目：</label>
-    <input type="text" id="topic" placeholder="例如：春天的校园">
 
-    <label>已写作文：</label>
-    <textarea id="essay" placeholder="可选，贴上你的作文"></textarea>
+    <!-- 用户信息区域（已登录时显示在右上角） -->
+    <div class="user-info">
+        <div class="status" id="status-msg">未登录</div>
+        <button id="logout-btn" onclick="logout()" style="display:none; margin-top: 0.5rem;">登出</button>
+    </div>
 
-    <label>写作要求：</label>
-    <input type="text" id="requirement" placeholder="例如：600字，友情主题">
+    <!-- 登录注册区域 -->
+    <div id="auth-section">
+        <input id="username" placeholder="用户名">
+        <input id="password" type="password" placeholder="密码">
+        <button id="register-btn" onclick="register()">注册</button>
+        <button id="login-btn" onclick="login()">登录</button>
+    </div>
 
-    <button onclick="sendRequest()">提交</button>
-    <div class="loading" id="loading"></div>
-    <div class="result" id="result"></div>
+    <!-- 写作区，默认隐藏 -->
+    <div id="writing-section" style="display:none;">
+        <label>作文题目：</label>
+        <input type="text" id="topic" placeholder="例如：春天的校园">
+
+        <label>已写作文：</label>
+        <textarea id="essay" placeholder="可选，贴上你的作文"></textarea>
+
+        <label>写作要求：</label>
+        <input type="text" id="requirement" placeholder="例如：600字，友情主题">
+
+        <button id="submit-btn" onclick="sendRequest()" disabled>提交</button>
+        <div class="loading" id="loading"></div>
+        <div class="result" id="result"></div>
+
+        <h3>历史记录</h3>
+        <div id="history" class="history"></div>
+    </div>
 </div>
 
 <script>
+    let currentUser = null;
+    const mainContainer = document.getElementById('main-container');
+
+    async function register(){
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const res = await fetch('/api/auth/register',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({username,password})
+        });
+        alert(await res.text());
+    }
+
+    async function login(){
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const res = await fetch('/api/auth/login',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({username,password})
+        });
+        if(res.ok){
+            currentUser = username;
+            updateStatus();
+            // 添加登录状态类
+            mainContainer.classList.add('logged-in');
+            document.getElementById('writing-section').style.display='block';
+            document.getElementById('submit-btn').disabled = false;
+            document.getElementById('logout-btn').style.display = 'inline-block';
+            loadHistory();
+        }
+        alert(await res.text());
+    }
+
+    async function logout(){
+        await fetch('/api/auth/logout',{method:'POST'});
+        currentUser = null;
+        updateStatus();
+        // 移除登录状态类
+        mainContainer.classList.remove('logged-in');
+        document.getElementById('writing-section').style.display='none';
+        document.getElementById('history').innerHTML = '';
+        document.getElementById('submit-btn').disabled = true;
+        document.getElementById('logout-btn').style.display = 'none';
+        alert('已登出');
+    }
+
+
     async function sendRequest() {
         const topic = document.getElementById('topic').value;
         const essay = document.getElementById('essay').value;
@@ -49,17 +133,16 @@
             body: JSON.stringify({ topic, essay, requirement })
         });
 
-        const data = await response.json();
+        const data = await response.text();
         document.getElementById('loading').style.display = 'none';
-
-        renderResult(data.ai_response);
+        renderResult(data);
+        loadHistory();
     }
 
     function renderResult(text) {
         const container = document.getElementById('result');
-
-        // 简单分块：按照换行拆分，匹配五感提示和建议
-        const sections = text.split(/\n+/);
+        container.innerHTML = '';
+        const sections = text.split(/\\n+/);
         sections.forEach(section => {
             const div = document.createElement('div');
             div.classList.add('section');
@@ -74,6 +157,20 @@
             }
             container.appendChild(div);
         });
+    }
+
+    async function loadHistory(){
+        const res = await fetch('/api/writing/history');
+        if(res.ok){
+            const data = await res.json();
+            document.getElementById('history').innerHTML = data
+                .map(item=>`<p><b>${item.inputType}</b>: ${item.inputContent}<br><i>${item.aiResponse}</i></p>`)
+                .join('');
+        }
+    }
+
+    function updateStatus(){
+        document.getElementById('status-msg').textContent = currentUser ? `已登录：${currentUser}` : '未登录';
     }
 </script>
 </body>

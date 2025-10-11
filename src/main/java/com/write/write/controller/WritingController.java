@@ -2,37 +2,40 @@ package com.write.write.controller;
 
 import com.write.write.dto.WritingRequest;
 import com.write.write.dto.WritingResponse;
+import com.write.write.entity.UserAccount;
+import com.write.write.repository.UserRepository;
 import com.write.write.service.WritingService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.*;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/writing")
+@RequiredArgsConstructor
 public class WritingController {
 
-
     private final WritingService writingService;
-
-
-    // 使用构造器注入，确保writingService被正确初始化
-    @Autowired
-    public WritingController(WritingService writingService) {
-        this.writingService = writingService;
-    }
-
+    private final UserRepository userRepository;
 
     @PostMapping("/process")
-    public ResponseEntity<WritingResponse> process(@RequestBody WritingRequest request) {
-        // 调用服务层处理请求
-        String aiResponse = writingService.handleRequest(request);
+    public ResponseEntity<WritingResponse> process(@RequestBody WritingRequest req, HttpSession session) {
+        Long userId = (Long) session.getAttribute("userId");
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        UserAccount user = userRepository.findById(userId).orElseThrow();
+        String result = writingService.handleRequest(req, user);
+        return ResponseEntity.ok(new WritingResponse(result));
+    }
 
-        // 封装响应并返回
-        WritingResponse response = new WritingResponse(aiResponse);
-        return ResponseEntity.ok(response);
+    @GetMapping("/history")
+    public ResponseEntity<?> getHistory(HttpSession session) {
+        Long userId = (Long) session.getAttribute("userId");
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        UserAccount user = userRepository.findById(userId).orElseThrow();
+        return ResponseEntity.ok(writingService.getHistory(user));
     }
 }
