@@ -54,3 +54,15 @@ WHERE wp.student_id NOT IN (SELECT id FROM user_account WHERE role = 'student');
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+

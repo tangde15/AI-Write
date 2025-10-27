@@ -37,6 +37,12 @@ public class WritingService {
         return callAI(prompt);
     }
 
+    /** 处理对比分析请求（重点：五感训练法）**/
+    public String handleComparisonRequest(WritingRequest newReq, WritingRecord previousRecord) {
+        String prompt = buildComparisonPrompt(newReq, previousRecord);
+        return callAI(prompt);
+    }
+
     /** AI 调用封装 **/
     public String callAI(String prompt) {
         try {
@@ -133,5 +139,48 @@ public class WritingService {
             System.err.println("❌ 提取评分失败: " + e.getMessage());
             return null;
         }
+    }
+
+    /** 构建对比分析提示词（重点：五感训练法）**/
+    private String buildComparisonPrompt(WritingRequest newReq, WritingRecord previousRecord) {
+        return "你是一个专业的作文指导老师，擅长使用五感训练法提升学生的写作能力。\n\n" +
+                "请对以下两篇作文进行对比分析，重点从五感训练法（视觉、听觉、味觉、嗅觉、触觉）的角度进行评价。\n\n" +
+                "要求：\n" +
+                "1. 对两篇作文分别进行评分（1-100分），第一行必须以「评分：XX分」开头\n" +
+                "2. 重点评估每篇作文在五感描写方面的运用情况\n" +
+                "3. 对比分析两篇作文在五感训练法应用上的进步\n" +
+                "4. 给出具体的五感训练改进建议\n\n" +
+                "评分标准：\n" +
+                "- 五感描写（30分）：是否充分运用视觉、听觉、味觉、嗅觉、触觉\n" +
+                "- 内容充实（30分）：情节完整，细节丰富\n" +
+                "- 结构完整（20分）：开头、发展、结尾\n" +
+                "- 语言表达（20分）：词汇丰富，句式多样\n\n" +
+                "【历史作文】\n" +
+                "题目：" + (previousRecord.getTopic() != null ? previousRecord.getTopic() : "") + "\n" +
+                "内容：" + (previousRecord.getEssay() != null ? previousRecord.getEssay() : "") + "\n\n" +
+                "【本次作文】\n" +
+                "题目：" + (newReq.getTopic() != null ? newReq.getTopic() : "") + "\n" +
+                "内容：" + (newReq.getEssay() != null ? newReq.getEssay() : "") + "\n\n" +
+                "请按照以下格式输出：\n" +
+                "【新作文评分】\n" +
+                "评分：XX分\n" +
+                "五感运用点评：[从五感描写角度点评]\n" +
+                "整体评价：[综合评价]\n\n" +
+                "【旧作文评分】\n" +
+                "评分：XX分\n" +
+                "五感运用点评：[从五感描写角度点评]\n\n" +
+                "【对比分析 - 五感训练法进步情况】\n\n" +
+                "✨ 五感描写方面的进步：\n" +
+                "1. 视觉描写：旧作文如何 → 新作文如何\n" +
+                "2. 听觉描写：旧作文如何 → 新作文如何\n" +
+                "3. 味觉描写：旧作文如何 → 新作文如何\n" +
+                "4. 嗅觉描写：旧作文如何 → 新作文如何\n" +
+                "5. 触觉描写：旧作文如何 → 新作文如何\n\n" +
+                "💪 仍需加强的五感：\n" +
+                "1. [具体指出哪些感官描写还需要加强]\n" +
+                "2. [给出具体的改进方法]\n\n" +
+                "💡 五感训练建议：\n" +
+                "1. [给出具体的五感训练方法]\n" +
+                "2. [建议学生在哪些场景下可以运用五感]\n";
     }
 }

@@ -32,6 +32,38 @@
                 </el-form-item>
 
                 <el-form-item>
+                  <el-switch
+                    v-model="enableComparison"
+                    active-text="与历史作文对比"
+                    inactive-text=""
+                  />
+                </el-form-item>
+
+                <el-form-item v-if="enableComparison" label="选择对比作文">
+                  <el-radio-group v-model="selectedPreviousWriting" class="comparison-radio-group">
+                    <el-radio 
+                      v-for="record in writings" 
+                      :key="record.id" 
+                      :label="record.id"
+                      class="comparison-radio-item"
+                    >
+                      <div class="comparison-item-content">
+                        <span class="comparison-topic">
+                          {{ truncateText(record.topic || '无标题', 30) }}
+                        </span>
+                        <span class="comparison-meta">
+                          {{ formatDateTime(record.createdAt) }}
+                          <el-tag size="small" class="comparison-score" v-if="record.score">
+                            {{ record.score }}分
+                          </el-tag>
+                        </span>
+                      </div>
+                    </el-radio>
+                  </el-radio-group>
+                  <el-empty v-if="writings.length === 0" description="暂无历史作文" :image-size="80" />
+                </el-form-item>
+
+                <el-form-item>
                   <el-button 
                     type="primary" 
                     :loading="submitting"
@@ -96,12 +128,12 @@
         </el-card>
 
         <!-- 历史记录 -->
-        <el-card style="margin-top: 20px;">
+        <el-card class="history-card" style="margin-top: 20px;">
           <template #header>
             <span><el-icon><Document /></el-icon> 我的作文历史</span>
           </template>
           
-          <el-collapse v-if="writings.length > 0" accordion>
+          <el-collapse v-if="writings.length > 0" accordion class="writing-list">
             <el-collapse-item
               v-for="record in writings"
               :key="record.id"
@@ -109,31 +141,39 @@
             >
               <template #title>
                 <div class="writing-title">
-                  <strong>{{ record.topic || '无标题' }}</strong>
-                  <el-tag size="small" style="margin-left: 10px;" v-if="record.score">
-                    得分: {{ record.score }}分
-                  </el-tag>
-                  <el-tag size="small" type="success" style="margin-left: 5px;" v-if="record.teacherFeedback">
-                    已批改
-                  </el-tag>
-                  <span class="timestamp">{{ formatDateTime(record.createdAt) }}</span>
+                  <span class="writing-topic">{{ truncateText(record.topic || '无标题', 20) }}</span>
+                  <div class="writing-metas">
+                    <el-tag size="small" class="score-tag" v-if="record.score">
+                      {{ record.score }}分
+                    </el-tag>
+                    <el-tag size="small" type="success" class="feedback-tag" v-if="record.teacherFeedback">
+                      已批改
+                    </el-tag>
+                    <span class="timestamp">{{ formatDateTime(record.createdAt) }}</span>
+                  </div>
                 </div>
               </template>
 
               <div class="writing-detail">
-                <h4>📝 作文内容：</h4>
-                <p class="essay-text">{{ record.essay }}</p>
+                <div class="detail-section">
+                  <h4 class="section-title">📝 作文内容</h4>
+                  <div class="essay-text-wrapper">
+                    <pre class="essay-text">{{ record.essay }}</pre>
+                  </div>
+                </div>
 
-                <el-divider />
+                <el-divider class="detail-divider" />
 
-                <h4>🤖 AI反馈：</h4>
-                <div class="ai-feedback" v-html="formatResponse(record.aiResponse || '暂无AI反馈')"></div>
+                <div class="detail-section">
+                  <h4 class="section-title">🤖 AI反馈</h4>
+                  <div class="ai-feedback" v-html="formatResponse(record.aiResponse || '暂无AI反馈')"></div>
+                </div>
 
-                <el-divider v-if="record.teacherFeedback" />
+                <el-divider class="detail-divider" v-if="record.teacherFeedback" />
 
-                <div v-if="record.teacherFeedback">
-                  <h4>👨‍🏫 教师批改：</h4>
-                  <p class="teacher-feedback">{{ record.teacherFeedback }}</p>
+                <div class="detail-section" v-if="record.teacherFeedback">
+                  <h4 class="section-title">👨‍🏫 教师批改</h4>
+                  <pre class="teacher-feedback">{{ record.teacherFeedback }}</pre>
                 </div>
               </div>
             </el-collapse-item>
@@ -218,6 +258,10 @@ const writingForm = reactive({
   essay: ''
 })
 
+// 对比相关
+const enableComparison = ref(false)
+const selectedPreviousWriting = ref(null)
+
 const inspirationForm = reactive({
   topic: ''
 })
@@ -234,14 +278,33 @@ const submitWriting = async () => {
     return
   }
 
+  // 如果启用了对比但没有选择历史作文，给出提示
+  if (enableComparison.value && !selectedPreviousWriting.value) {
+    ElMessage.warning('请选择一篇历史作文进行对比')
+    return
+  }
+
   submitting.value = true
   try {
-    const response = await studentAPI.submitWriting({
+    const requestData = {
       topic: writingForm.topic,
       essay: writingForm.essay
-    })
+    }
+
+    // 如果启用了对比模式，添加previousWritingId
+    if (enableComparison.value && selectedPreviousWriting.value) {
+      requestData.previousWritingId = selectedPreviousWriting.value
+    }
+
+    const response = await studentAPI.submitWriting(requestData)
     aiResponse.value = response.result || response.content
-    ElMessage.success('提交成功！AI已生成反馈')
+    ElMessage.success(enableComparison.value ? '提交成功！已生成对比分析反馈' : '提交成功！AI已生成反馈')
+    
+    // 清空表单
+    writingForm.topic = ''
+    writingForm.essay = ''
+    enableComparison.value = false
+    selectedPreviousWriting.value = null
     
     // 刷新历史记录
     loadWritings()
@@ -290,6 +353,13 @@ const formatDateTime = (dateStr) => {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+// 文本截断处理
+const truncateText = (text, maxLength) => {
+  if (!text) return '无标题'
+  if (text.length <= maxLength) return text
+  return text.substring(0, maxLength) + '...'
 }
 
 // 加载数据
@@ -408,52 +478,236 @@ onMounted(() => {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 12px;
   width: 100%;
+  min-height: 40px;
+}
+
+.writing-topic {
+  flex: 1;
+  font-weight: 500;
+  font-size: 14px;
+  color: #303133;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.writing-metas {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.score-tag {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  font-weight: 600;
+  min-width: 50px;
+  text-align: center;
+}
+
+.feedback-tag {
+  color: #67c23a;
+  border-color: #67c23a;
 }
 
 .timestamp {
-  margin-left: auto;
   font-size: 12px;
   color: #909399;
+  white-space: nowrap;
+}
+
+.history-card {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.writing-list {
+  border-radius: 8px;
 }
 
 .writing-detail {
-  padding: 15px;
+  padding: 20px;
+  background: #fafbfc;
 }
 
-.writing-detail h4 {
-  margin-top: 0;
-  margin-bottom: 10px;
+.detail-section {
+  margin-bottom: 20px;
+}
+
+.detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  margin: 0 0 12px 0;
   color: #303133;
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.detail-divider {
+  margin: 20px 0 !important;
+}
+
+.essay-text-wrapper {
+  background: white;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .essay-text {
+  margin: 0;
   line-height: 1.8;
   color: #606266;
   white-space: pre-wrap;
   word-wrap: break-word;
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .ai-feedback {
+  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  padding: 15px;
+  border-radius: 6px;
+  border-left: 4px solid #667eea;
   line-height: 1.8;
-  color: #409eff;
+  color: #303133;
   white-space: pre-wrap;
   word-wrap: break-word;
+  font-size: 14px;
 }
 
 .teacher-feedback {
+  background: #f0f9ff;
+  padding: 15px;
+  border-radius: 6px;
+  border-left: 4px solid #67c23a;
   line-height: 1.8;
   color: #67c23a;
   white-space: pre-wrap;
   word-wrap: break-word;
+  font-size: 14px;
+  margin: 0;
 }
 
+/* 响应式优化 */
 @media (max-width: 768px) {
   .el-col {
     margin-bottom: 20px;
   }
+
+  .writing-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .writing-topic {
+    max-width: 100%;
+  }
+
+  .writing-metas {
+    flex-wrap: wrap;
+  }
+
+  .essay-text-wrapper {
+    max-height: 200px;
+  }
+}
+
+/* 对比选择区域样式 */
+.comparison-radio-group {
+  width: 100%;
+}
+
+.comparison-radio-item {
+  display: flex !important;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  background: white;
+  cursor: pointer;
+}
+
+/* 覆盖悬停效果 */
+.comparison-radio-item:hover {
+  border-color: #409eff;
+  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%) !important;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  transform: scale(1.01);
+}
+
+/* 选中状态 */
+.comparison-radio-item :deep(.el-radio__input.is-checked) ~ .el-radio__label {
+  color: #303133;
+}
+
+.comparison-radio-item :deep(.el-radio__input.is-checked) ~ .el-radio__label .comparison-item-content {
+  opacity: 1;
+}
+
+/* 确保radio圆圈与内容对齐 */
+.comparison-radio-item :deep(.el-radio__label) {
+  width: 100%;
+  padding-left: 8px;
+  display: flex;
+  align-items: center;
+  color: #303133 !important;
+}
+
+.comparison-radio-item :deep(.el-radio__input) {
+  flex-shrink: 0;
+  margin-top: 0;
+}
+
+.comparison-item-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 1;
+}
+
+.comparison-topic {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133 !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  display: block;
+}
+
+.comparison-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #909399;
+  white-space: nowrap;
+}
+
+.comparison-score {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  font-weight: 600;
 }
 </style>
 

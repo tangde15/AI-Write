@@ -206,3 +206,15 @@ INSERT INTO encouragement_message (student_id, sender_id, sender_type, content, 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+

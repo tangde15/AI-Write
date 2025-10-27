@@ -24,7 +24,9 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req, HttpSession session) {
+        System.out.println("[Auth] 登录请求 - 用户名: '" + req.getUsername() + "', 角色: '" + req.getRole() + "'");
         UserAccount user = userService.verify(req.getUsername(), req.getPassword());
+        System.out.println("[Auth] 用户查询结果: " + (user != null ? "找到用户" : "未找到用户"));
         if (user != null) {
             // 验证用户角色是否匹配
             if (req.getRole() != null && !req.getRole().equalsIgnoreCase(user.getRole())) {

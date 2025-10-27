@@ -30,6 +30,13 @@ public class WritingRecord {
     /** AI评分（1-100分） **/
     private Integer score;
 
+    /** 如果这篇作文是与之前作文对比后提交的，这里存储被对比作文的ID **/
+    private Long previousRecordId;
+
+    /** AI对比分析结果（TEXT类型存储详细的对比分析） **/
+    @Column(columnDefinition = "TEXT")
+    private String comparisonAnalysis;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

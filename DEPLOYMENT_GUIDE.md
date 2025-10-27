@@ -468,3 +468,15 @@ java -Xms512m -Xmx1024m -jar target/Write-0.0.1-SNAPSHOT.jar
 **部署完成后，您就可以通过浏览器访问 `http://your-server-ip` 来使用AI五感作文训练平台了！**
 
 
+
+
+
+
+
+
+
+
+
+
+
+

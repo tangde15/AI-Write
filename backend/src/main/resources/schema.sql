@@ -12,9 +12,13 @@ CREATE TABLE IF NOT EXISTS writing_record (
     essay TEXT,
     ai_response TEXT,
     teacher_feedback TEXT,
+    score INT,
+    previous_record_id BIGINT,
+    comparison_analysis TEXT,
     created_at DATETIME,
     updated_at DATETIME,
-    CONSTRAINT fk_record_user FOREIGN KEY (user_id) REFERENCES user_account(id)
+    CONSTRAINT fk_record_user FOREIGN KEY (user_id) REFERENCES user_account(id),
+    CONSTRAINT fk_record_previous FOREIGN KEY (previous_record_id) REFERENCES writing_record(id)
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS writing_progress (

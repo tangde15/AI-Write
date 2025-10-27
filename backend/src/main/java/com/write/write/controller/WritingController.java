@@ -35,8 +35,32 @@ public class WritingController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
-        // 调用AI获取反馈
-        String result = writingService.handleRequest(request);
+        String result;
+        String comparisonAnalysis = null;
+        Integer previousScore = null;
+        
+        // 判断是否为对比模式
+        if (request.getPreviousWritingId() != null && request.getPreviousWritingId() > 0) {
+            // 获取要对比的历史作文
+            WritingRecord previousRecord = writingRecordRepository.findById(request.getPreviousWritingId())
+                    .orElse(null);
+            
+            if (previousRecord != null && previousRecord.getUser().getId().equals(userId)) {
+                // 调用对比分析AI
+                result = writingService.handleComparisonRequest(request, previousRecord);
+                comparisonAnalysis = result;
+                previousScore = previousRecord.getScore();
+                
+                System.out.println("📊 对比分析模式：将新作文与ID " + request.getPreviousWritingId() + " 进行对比");
+            } else {
+                // 如果找不到历史作文，使用普通模式
+                result = writingService.handleRequest(request);
+                System.out.println("⚠️ 找不到历史作文或无权访问，使用普通模式");
+            }
+        } else {
+            // 普通模式
+            result = writingService.handleRequest(request);
+        }
         
         // 从AI响应中提取评分
         Integer score = writingService.extractScore(result);
@@ -49,6 +73,13 @@ public class WritingController {
             record.setEssay(request.getEssay());
             record.setAiResponse(result);
             record.setScore(score);
+            
+            // 如果是对比模式，保存对比分析信息
+            if (comparisonAnalysis != null && request.getPreviousWritingId() != null) {
+                record.setPreviousRecordId(request.getPreviousWritingId());
+                record.setComparisonAnalysis(comparisonAnalysis);
+            }
+            
             record.setCreatedAt(LocalDateTime.now());
             record.setUpdatedAt(LocalDateTime.now());
             
