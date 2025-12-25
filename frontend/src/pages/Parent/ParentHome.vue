@@ -1,6 +1,40 @@
 <template>
   <div class="parent-home">
-    <el-row :gutter="20">
+    <!-- 左侧导航栏 -->
+    <div class="left-navbar">
+      <div class="nav-header">
+        <el-avatar>{{ userStore.username.charAt(0) }}</el-avatar>
+        <span>{{ userStore.username }}</span>
+      </div>
+      
+      <el-menu
+        :default-active="activeNav"
+        class="nav-menu"
+        background-color="#2c3e50"
+        text-color="#ecf0f1"
+        active-text-color="#3498db"
+      >
+        <el-menu-item index="home">
+          <el-icon><HomeFilled /></el-icon>
+          <span>首页</span>
+        </el-menu-item>
+        
+        <el-menu-item index="messages" @click="goToChat">
+          <el-icon><ChatDotRound /></el-icon>
+          <span>聊天</span>
+          <el-badge :value="unreadCount" v-if="unreadCount > 0" class="nav-badge" />
+        </el-menu-item>
+        
+        <el-menu-item index="other" @click="showComingSoon">
+          <el-icon><Setting /></el-icon>
+          <span>其他功能</span>
+        </el-menu-item>
+      </el-menu>
+    </div>
+    
+    <!-- 右侧内容区 -->
+    <div class="content-area">
+      <el-row :gutter="20">
       <!-- 左侧：孩子列表 -->
       <el-col :xs="24" :lg="8">
         <el-card>
@@ -217,17 +251,25 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/store/user'
 import { parentAPI } from '@/api/parent'
 import { bindingAPI } from '@/api/binding'
+import { messageAPI } from '@/api/message'
 import { ElMessage } from 'element-plus'
 import { 
   User, ArrowRight, TrendCharts, Document, 
-  Star, ChatDotRound, Position, Reading, Plus, Link
+  Star, ChatDotRound, Position, Reading, Plus, Link,
+  HomeFilled, Setting
 } from '@element-plus/icons-vue'
 import ChartProgress from '@/components/ChartProgress.vue'
 import EncouragementList from '@/pages/Common/EncouragementList.vue'
 
+const router = useRouter()
+const userStore = useUserStore()
+const activeNav = ref('home')
+const unreadCount = ref(0)
 const children = ref([])
 const selectedChild = ref(null)
 const childWritings = ref([])
@@ -362,15 +404,90 @@ const loadChildren = async () => {
   }
 }
 
+const goToChat = () => {
+  router.push('/chat')
+}
+
+const showComingSoon = () => {
+  ElMessage.info('功能开发中，敬请期待！')
+}
+
+const loadUnreadCount = async () => {
+  try {
+    const count = await messageAPI.getUnreadCount()
+    unreadCount.value = count || 0
+  } catch (error) {
+    console.error('加载未读数失败:', error)
+  }
+}
+
+let pollInterval = null
+
 onMounted(() => {
   loadChildren()
+  loadUnreadCount()
+  
+  // 每30秒更新一次未读数
+  pollInterval = setInterval(loadUnreadCount, 30000)
+})
+
+onUnmounted(() => {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+  }
 })
 </script>
 
 <style scoped>
 .parent-home {
-  max-width: 1400px;
-  margin: 0 auto;
+  display: flex;
+  min-height: 100vh;
+  background: #f0f2f5;
+}
+
+/* 左侧导航栏 */
+.left-navbar {
+  width: 240px;
+  background: #2c3e50;
+  color: #ecf0f1;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  overflow-y: auto;
+}
+
+.nav-header {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #34495e;
+  border-bottom: 1px solid #2c3e50;
+}
+
+.nav-header span {
+  font-weight: 600;
+  color: #ecf0f1;
+}
+
+.nav-menu {
+  flex: 1;
+  border: none;
+}
+
+.nav-badge {
+  margin-left: 8px;
+}
+
+/* 右侧内容区 */
+.content-area {
+  flex: 1;
+  margin-left: 240px;
+  padding: 20px;
+  max-width: calc(100% - 240px);
 }
 
 .child-item {

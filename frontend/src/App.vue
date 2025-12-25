@@ -1,7 +1,6 @@
 <template>
   <div id="app" class="app-container">
-    <NavBar v-if="userStore.isLoggedIn" />
-    <main class="main-content" :class="{ 'with-navbar': userStore.isLoggedIn }">
+    <main class="main-content">
       <router-view />
     </main>
   </div>
@@ -10,7 +9,6 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useUserStore } from '@/store/user'
-import NavBar from '@/components/NavBar.vue'
 
 const userStore = useUserStore()
 
@@ -49,8 +47,8 @@ body {
   transition: all 0.3s ease;
 }
 
-.main-content.with-navbar {
-  margin-top: 60px;
+.main-content {
+  margin-top: 0;
 }
 
 /* 滚动条样式 */

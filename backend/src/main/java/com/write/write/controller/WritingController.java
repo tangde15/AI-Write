@@ -4,6 +4,7 @@ import com.write.write.dto.WritingRequest;
 import com.write.write.dto.WritingResponse;
 import com.write.write.entity.WritingProgress;
 import com.write.write.entity.WritingRecord;
+import com.write.write.entity.UserAccount;
 import com.write.write.service.WritingService;
 import com.write.write.repository.WritingProgressRepository;
 import com.write.write.repository.WritingRecordRepository;
@@ -96,6 +97,35 @@ public class WritingController {
         }
         
         return ResponseEntity.ok(new WritingResponse(result));
+    }
+
+    @GetMapping("/list")
+    public ResponseEntity<List<WritingRecord>> list(@RequestParam(required = false) Long studentId, HttpSession session) {
+        Long userId = (Long) session.getAttribute("userId");
+        if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        // 如果带 studentId，允许教师查看学生记录（简化权限）
+        if (studentId != null) {
+            UserAccount student = userRepository.findById(studentId).orElse(null);
+            if (student == null) return ResponseEntity.notFound().build();
+            List<WritingRecord> list = writingRecordRepository.findByUserOrderByCreatedAtDesc(student);
+            return ResponseEntity.ok(list);
+        }
+
+        // 返回当前用户的写作记录
+        UserAccount user = userRepository.findById(userId).orElse(null);
+        if (user == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        List<WritingRecord> list = writingRecordRepository.findByUserOrderByCreatedAtDesc(user);
+        return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/detail/{id}")
+    public ResponseEntity<WritingRecord> detail(@PathVariable Long id, HttpSession session) {
+        Long userId = (Long) session.getAttribute("userId");
+        if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        WritingRecord r = writingRecordRepository.findById(id).orElse(null);
+        if (r == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(r);
     }
     
     /**

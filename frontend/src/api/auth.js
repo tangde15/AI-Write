@@ -2,7 +2,8 @@ import axios from 'axios'
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 900000  // 15分钟
+  timeout: 900000,  // 15分钟
+  withCredentials: true  // 携带Cookie，维持Session
 })
 
 // 请求拦截器

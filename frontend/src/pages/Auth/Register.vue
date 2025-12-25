@@ -23,6 +23,14 @@
           />
         </el-form-item>
 
+        <el-form-item label="账号" prop="account">
+          <el-input 
+            v-model="registerForm.account" 
+            placeholder="请输入账号（3-20个字符）"
+            :prefix-icon="User"
+          />
+        </el-form-item>
+
         <el-form-item label="密码" prop="password">
           <el-input 
             v-model="registerForm.password" 
@@ -57,6 +65,41 @@
           </el-select>
         </el-form-item>
 
+        <el-form-item 
+          v-if="registerForm.role === 'STUDENT'" 
+          label="学历" 
+          prop="educationLevel"
+        >
+          <el-select 
+            v-model="registerForm.educationLevel" 
+            placeholder="请选择学历" 
+            style="width: 100%"
+            @change="handleEducationLevelChange"
+          >
+            <el-option label="小学" value="PRIMARY" />
+            <el-option label="初中" value="MIDDLE" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item 
+          v-if="registerForm.role === 'STUDENT' && registerForm.educationLevel" 
+          label="年级" 
+          prop="grade"
+        >
+          <el-select 
+            v-model="registerForm.grade" 
+            placeholder="请选择年级" 
+            style="width: 100%"
+          >
+            <el-option 
+              v-for="grade in availableGrades" 
+              :key="grade.value" 
+              :label="grade.label" 
+              :value="grade.value" 
+            />
+          </el-select>
+        </el-form-item>
+
         <el-form-item>
           <el-button 
             type="primary" 
@@ -78,7 +121,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { User, Lock } from '@element-plus/icons-vue'
@@ -90,9 +133,46 @@ const loading = ref(false)
 
 const registerForm = reactive({
   username: '',
+  account: '',
   password: '',
   confirmPassword: '',
-  role: 'STUDENT'
+  role: 'STUDENT',
+  educationLevel: '',
+  grade: ''
+})
+
+// 根据学历动态生成年级选项
+const availableGrades = computed(() => {
+  if (registerForm.educationLevel === 'PRIMARY') {
+    return [
+      { label: '一年级', value: 'GRADE_1' },
+      { label: '二年级', value: 'GRADE_2' },
+      { label: '三年级', value: 'GRADE_3' },
+      { label: '四年级', value: 'GRADE_4' },
+      { label: '五年级', value: 'GRADE_5' },
+      { label: '六年级', value: 'GRADE_6' }
+    ]
+  } else if (registerForm.educationLevel === 'MIDDLE') {
+    return [
+      { label: '一年级', value: 'GRADE_1' },
+      { label: '二年级', value: 'GRADE_2' },
+      { label: '三年级', value: 'GRADE_3' }
+    ]
+  }
+  return []
+})
+
+// 当学历改变时，清空年级选择
+const handleEducationLevelChange = () => {
+  registerForm.grade = ''
+}
+
+// 当角色改变时，清空学历和年级
+watch(() => registerForm.role, (newRole) => {
+  if (newRole !== 'STUDENT') {
+    registerForm.educationLevel = ''
+    registerForm.grade = ''
+  }
 })
 
 const validateConfirmPassword = (rule, value, callback) => {
@@ -110,6 +190,10 @@ const rules = {
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 3, max: 20, message: '用户名长度在 3 到 20 个字符', trigger: 'blur' }
   ],
+  account: [
+    { required: true, message: '请输入账号', trigger: 'blur' },
+    { min: 3, max: 20, message: '账号长度在 3 到 20 个字符', trigger: 'blur' }
+  ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, message: '密码长度至少 6 个字符', trigger: 'blur' }
@@ -119,6 +203,30 @@ const rules = {
   ],
   role: [
     { required: true, message: '请选择角色', trigger: 'change' }
+  ],
+  educationLevel: [
+    { 
+      validator: (rule, value, callback) => {
+        if (registerForm.role === 'STUDENT' && !value) {
+          callback(new Error('请选择学历'))
+        } else {
+          callback()
+        }
+      }, 
+      trigger: 'change' 
+    }
+  ],
+  grade: [
+    { 
+      validator: (rule, value, callback) => {
+        if (registerForm.role === 'STUDENT' && registerForm.educationLevel && !value) {
+          callback(new Error('请选择年级'))
+        } else {
+          callback()
+        }
+      }, 
+      trigger: 'change' 
+    }
   ]
 }
 
@@ -154,14 +262,16 @@ const goToLogin = () => {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  background: white;
   padding: 20px;
 }
 
 .register-card {
   width: 100%;
-  max-width: 500px;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  max-width: 450px;
+  border-radius: 8px;
+  box-shadow: none;
+  background: white;
 }
 
 .card-header {

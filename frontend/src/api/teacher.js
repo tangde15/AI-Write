@@ -1,36 +1,27 @@
 import api from './auth'
-import { bindingAPI } from './binding'
 
 export const teacherAPI = {
-  // 获取所有学生列表
-  async getStudents() {
-    const response = await bindingAPI.getMyBindings()
-    return response.students || []
-  },
+  // 绑定码
+  getBindingCode() { return api.get('/teacher/binding/code') },
+  resetBindingCode() { return api.post('/teacher/binding/reset') },
+  bindByCode(code) { return api.post('/teacher/bind/by-code', null, { params: { code } }) },
 
-  // 获取某个学生的所有作文
-  getStudentWritings(studentId) {
-    return api.get(`/teacher/students/${studentId}/records`)
-  },
+  // 学生列表（已绑定）
+  getBoundStudents() { return api.get('/teacher/students') },
 
-  // 提交教师批改反馈
-  submitFeedback(writingId, feedback) {
-    return api.post(`/teacher/feedback/${writingId}`, { feedback })
-  },
+  // 学生能力
+  getStudentSummary(studentId) { return api.get(`/teacher/student/${studentId}/ability/summary`) },
+  getStudentTimeseries(studentId, range) { return api.get(`/teacher/student/${studentId}/ability/timeseries`, { params: { range } }) },
 
-  // 获取学生进步统计
-  getStudentProgress(studentId) {
-    return api.get(`/teacher/students/${studentId}/progress`)
-  },
+  // 作文重批
+  reviewWriting(id, payload) { return api.put(`/teacher/writing/${id}/review`, payload) },
 
-  // 发送激励语给学生
-  sendEncouragement(studentId, content) {
-    return api.post('/encouragement/send', {
-      studentId,
-      content,
-      fromRole: 'TEACHER'
-    })
-  }
+  // 学生作文/练习列表与详情（教师端查看）
+  getStudentWritings(studentId) { return api.get(`/writing/list`, { params: { studentId } }) },
+  getStudentSubmissions(studentId) { return api.get(`/teacher/student/${studentId}/submissions`) },
+  getWritingDetail(id) { return api.get(`/writing/detail/${id}`) },
+  getPracticeAnswerDetail(id) { return api.get(`/practice/answers/${id}/detail`) },
+  reviewPracticeAnswer(id, payload) { return api.put(`/teacher/practice/${id}/review`, payload) }
 }
 
 

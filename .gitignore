@@ -1,0 +1,64 @@
+# Virtual Environment
+conda-env/
+conda-pkgs/
+
+# Export directory
+export/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation files (temporary/guide files)
+BINDING_GUIDE.md
+FIX_NPM_CACHE.md
+IMPLEMENTATION_COMPLETE_REPORT.md
+INTEGRATION_TEST_GUIDE.md
+POSTMAN_AI_API_TEST.md
+PRACTICE_DATA_SETUP.md
+PROJECT_COMPLETION_SUMMARY.md
+REALTIME_CHAT_IMPLEMENTATION.md
+REALTIME_CHAT_QUICKSTART.md
+START_PROJECT.md
+AI_API_响应速度差异分析.md
+AI_API_Test.postman_collection.json
+WEB开发技术应用与总结.docx
+
+# Batch files
+clean-data.bat
+
+# Build artifacts
+*.jar
+*.war
+*.ear
+*.class
+target/
+build/
+dist/
+*.log
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~

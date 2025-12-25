@@ -4,6 +4,10 @@ import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [vue()],
+  define: {
+    // Fix libraries expecting Node's global in browser
+    global: 'window'
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src')
@@ -11,9 +15,10 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:8080',
         changeOrigin: true
       }
     }

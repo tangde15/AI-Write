@@ -39,4 +39,12 @@ public class WritingRecord {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    /** 教师重批维度分（可选） **/
+    private Integer teacherContentScore;
+    private Integer teacherStructureScore;
+    private Integer teacherLanguageScore;
+    private Integer teacherCreativityScore;
+    private Integer teacherOverallScore;
+    private LocalDateTime teacherReviewedAt;
 }

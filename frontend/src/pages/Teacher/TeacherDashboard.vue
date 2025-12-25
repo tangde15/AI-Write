@@ -1,426 +1,372 @@
 <template>
   <div class="teacher-dashboard">
-    <el-row :gutter="20">
-      <!-- 左侧：学生列表 -->
-      <el-col :xs="24" :lg="8">
-        <el-card>
-          <template #header>
-            <div class="card-header-flex">
-              <span><el-icon><User /></el-icon> 学生列表</span>
-              <el-button 
-                type="primary" 
-                size="small"
-                :icon="Plus"
-                @click="showBindDialog = true"
-              >
-                绑定学生
-              </el-button>
-            </div>
-          </template>
-          
-          <el-input
-            v-model="searchKeyword"
-            placeholder="搜索学生..."
-            :prefix-icon="Search"
-            style="margin-bottom: 15px;"
-          />
-
-          <el-list>
-            <el-list-item
-              v-for="student in filteredStudents"
-              :key="student.id"
-              :class="{ 'active': selectedStudent?.id === student.id }"
-              @click="selectStudent(student)"
-              class="student-item"
-            >
-              <div class="student-info">
-                <el-avatar :size="40">{{ student.username.charAt(0) }}</el-avatar>
-                <div class="student-details">
-                  <div class="student-name">{{ student.username }}</div>
-                  <div class="student-stats">作文数: {{ student.writingCount || 0 }}</div>
-                </div>
-              </div>
-              <el-icon><ArrowRight /></el-icon>
-            </el-list-item>
-          </el-list>
-        </el-card>
-      </el-col>
-
-      <!-- 右侧：学生详情 -->
-      <el-col :xs="24" :lg="16">
-        <div v-if="!selectedStudent" class="empty-state">
-          <el-empty description="请选择一个学生查看详情" />
+    <!-- 左侧导航栏 -->
+    <div class="left-navbar">
+      <div class="nav-header">
+        <el-avatar>{{ userStore.username.charAt(0) }}</el-avatar>
+        <div class="user-info">
+          <div class="username">{{ userStore.username }}</div>
+          <a href="#" @click.prevent="handleLogout" class="logout-link">退出登录</a>
         </div>
-
-        <div v-else>
-          <!-- 学生进步统计 -->
-          <el-card class="stat-card">
-            <template #header>
-              <span><el-icon><TrendCharts /></el-icon> {{ selectedStudent.username }} 的成长曲线</span>
-            </template>
-            <ChartProgress :data="studentProgress" />
-          </el-card>
-
-          <!-- 作文列表 -->
-          <el-card style="margin-top: 20px;">
-            <template #header>
-              <div class="card-header-flex">
-                <span><el-icon><Document /></el-icon> 作文列表</span>
-                <el-button 
-                  type="primary" 
-                  size="small"
-                  :icon="Message"
-                  @click="showEncouragementDialog = true"
-                >
-                  发送激励语
-                </el-button>
-              </div>
-            </template>
-
-            <el-collapse v-model="activeWriting" accordion>
-              <el-collapse-item
-                v-for="writing in studentWritings"
-                :key="writing.id"
-                :name="writing.id"
-              >
-                <template #title>
-                  <div class="writing-title">
-                    <strong>{{ writing.topic }}</strong>
-                    <el-tag size="small" style="margin-left: 10px;">
-                      {{ formatDate(writing.createdAt) }}
-                    </el-tag>
-                  </div>
-                </template>
-
-                <div class="writing-content">
-                  <h4>作文内容：</h4>
-                  <p class="essay-text">{{ writing.essay }}</p>
-
-                  <el-divider />
-
-                  <h4>AI反馈：</h4>
-                  <p class="ai-feedback">{{ writing.aiResponse || '暂无AI反馈' }}</p>
-
-                  <el-divider />
-
-                  <h4>教师批改：</h4>
-                  <el-input
-                    v-model="feedbackForm[writing.id]"
-                    type="textarea"
-                    :rows="4"
-                    placeholder="请输入您的批改意见..."
-                  />
-                  <el-button
-                    type="primary"
-                    size="small"
-                    style="margin-top: 10px;"
-                    @click="submitFeedback(writing.id)"
-                    :loading="submittingFeedback[writing.id]"
-                  >
-                    提交批改
-                  </el-button>
-                </div>
-              </el-collapse-item>
-            </el-collapse>
-          </el-card>
-        </div>
-      </el-col>
-    </el-row>
-
-    <!-- 绑定学生对话框 -->
-    <el-dialog
-      v-model="showBindDialog"
-      title="绑定学生"
-      width="500px"
-    >
-      <el-alert
-        title="绑定说明"
-        type="info"
-        :closable="false"
-        style="margin-bottom: 15px;"
+      </div>
+      
+      <el-menu
+        :default-active="activeNav"
+        class="nav-menu"
+        background-color="#2c3e50"
+        text-color="#ecf0f1"
+        active-text-color="#3498db"
       >
-        请输入学生的用户名来建立绑定关系，绑定后您就可以查看学生的作文和发送激励语了。
-      </el-alert>
+        <el-menu-item index="home">
+          <el-icon><HomeFilled /></el-icon>
+          <span>推荐</span>
+        </el-menu-item>
+        
+        <el-menu-item index="practice" @click="goPractice">
+          <el-icon><Edit /></el-icon>
+          <span>练习</span>
+        </el-menu-item>
+        
+        <el-menu-item index="books" @click="goMyBooks">
+          <el-icon><FolderOpened /></el-icon>
+          <span>我的题单</span>
+        </el-menu-item>
+        
+        <el-menu-item index="new-book" @click="goNewBook">
+          <el-icon><CirclePlusFilled /></el-icon>
+          <span>新增题单</span>
+        </el-menu-item>
+        
+        <el-menu-item index="messages" @click="goToChat">
+          <el-icon><ChatDotRound /></el-icon>
+          <span>聊天</span>
+        </el-menu-item>
+      </el-menu>
+    </div>
+    
+    <!-- 右侧内容区 -->
+    <div class="content-area">
+      <el-row :gutter="20">
+      <!-- 每日推荐区域 -->
+      <el-col :span="24">
+        <div class="section-title">每日推荐</div>
+        <el-row :gutter="20" style="margin-bottom: 40px;" v-loading="loadingEssays">
+          <el-col :span="6" v-for="essay in dailyRecommendations" :key="essay.id" class="recommendation-card-col">
+            <el-card class="recommendation-card" shadow="hover" @click="goToEssayDetail(essay.id)">
+              <div class="card-content">
+                <h3 class="card-title">{{ essay.title }}</h3>
+                <p class="card-author">{{ essay.author }}</p>
+                <p class="card-preview">{{ getPreview(essay.content) }}</p>
+                <div class="card-footer">
+                  <el-tag v-if="essay.tag" size="small">{{ essay.tag }}</el-tag>
+                  <span class="card-rating">
+                    <el-icon><Star /></el-icon>
+                    {{ essay.favoriteCount || 0 }}
+                  </span>
+                </div>
+              </div>
+            </el-card>
+          </el-col>
+          <el-col :span="24" v-if="!loadingEssays && dailyRecommendations.length === 0">
+            <el-empty description="暂无推荐范文" :image-size="100" />
+          </el-col>
+        </el-row>
+      </el-col>
       
-      <el-form :model="bindForm" label-width="100px">
-        <el-form-item label="学生用户名" required>
-          <el-input
-            v-model="bindForm.studentUsername"
-            placeholder="请输入学生的用户名"
-            clearable
-          />
-        </el-form-item>
-      </el-form>
-      
-      <template #footer>
-        <el-button @click="showBindDialog = false">取消</el-button>
-        <el-button 
-          type="primary" 
-          @click="bindStudent" 
-          :loading="bindingStudent"
-          :icon="Link"
-        >
-          绑定
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 发送激励语对话框 -->
-    <el-dialog
-      v-model="showEncouragementDialog"
-      title="发送激励语"
-      width="500px"
-    >
-      <el-input
-        v-model="encouragementContent"
-        type="textarea"
-        :rows="5"
-        placeholder="写下对学生的鼓励话语..."
-      />
-      <template #footer>
-        <el-button @click="showEncouragementDialog = false">取消</el-button>
-        <el-button type="primary" @click="sendEncouragement" :loading="sendingEncouragement">
-          发送
-        </el-button>
-      </template>
-    </el-dialog>
+      <!-- 收藏榜单区域 -->
+      <el-col :span="24">
+        <div class="section-title">收藏榜单</div>
+        <el-row :gutter="20" v-loading="loadingFavorites">
+          <el-col :span="6" v-for="essay in favoriteList" :key="essay.id" class="recommendation-card-col">
+            <el-card class="recommendation-card" shadow="hover" @click="goToEssayDetail(essay.id)">
+              <div class="card-content">
+                <h3 class="card-title">{{ essay.title }}</h3>
+                <p class="card-author">{{ essay.author }}</p>
+                <p class="card-preview">{{ getPreview(essay.content) }}</p>
+                <div class="card-footer">
+                  <el-tag v-if="essay.tag" size="small">{{ essay.tag }}</el-tag>
+                  <span class="card-rating">
+                    <el-icon><Star /></el-icon>
+                    {{ essay.favoriteCount || 0 }}
+                  </span>
+                </div>
+              </div>
+            </el-card>
+          </el-col>
+          <el-col :span="24" v-if="!loadingFavorites && favoriteList.length === 0">
+            <el-empty description="暂无收藏榜单" :image-size="100" />
+          </el-col>
+        </el-row>
+      </el-col>
+      </el-row>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { teacherAPI } from '@/api/teacher'
-import { bindingAPI } from '@/api/binding'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/store/user'
+import { sampleEssayAPI } from '@/api/sampleEssay'
 import { ElMessage } from 'element-plus'
 import { 
-  User, Search, ArrowRight, TrendCharts, 
-  Document, Message, Plus, Link
+  HomeFilled, Edit, ChatDotRound, Star, FolderOpened, CirclePlusFilled
 } from '@element-plus/icons-vue'
-import ChartProgress from '@/components/ChartProgress.vue'
 
-const searchKeyword = ref('')
-const students = ref([])
-const selectedStudent = ref(null)
-const studentWritings = ref([])
-const studentProgress = ref([])
-const activeWriting = ref(null)
-const feedbackForm = reactive({})
-const submittingFeedback = reactive({})
-const showEncouragementDialog = ref(false)
-const encouragementContent = ref('')
-const sendingEncouragement = ref(false)
-const showBindDialog = ref(false)
-const bindingStudent = ref(false)
-const bindForm = ref({
-  studentUsername: ''
-})
+const router = useRouter()
+const userStore = useUserStore()
+const activeNav = ref('home')
+const dailyRecommendations = ref([])
+const favoriteList = ref([])
+const loadingEssays = ref(false)
+const loadingFavorites = ref(false)
 
-const filteredStudents = computed(() => {
-  if (!searchKeyword.value) return students.value
-  return students.value.filter(s => 
-    s.username.toLowerCase().includes(searchKeyword.value.toLowerCase())
-  )
-})
-
-const selectStudent = async (student) => {
-  console.log('🔄 切换学生:', student.username, 'ID:', student.id)
-  
-  // 先清空之前的数据，避免显示缓存
-  studentWritings.value = []
-  studentProgress.value = []
-  
-  selectedStudent.value = student
-  await loadStudentData(student.id)
+const goToChat = () => {
+  router.push('/chat')
 }
 
-const loadStudentData = async (studentId) => {
-  try {
-    // 加载学生作文
-    const writings = await teacherAPI.getStudentWritings(studentId)
-    studentWritings.value = writings || []
-
-    // 初始化反馈表单
-    writings?.forEach(w => {
-      feedbackForm[w.id] = w.teacherFeedback || ''
-    })
-
-    // 加载学生进度
-    const progress = await teacherAPI.getStudentProgress(studentId)
-    studentProgress.value = progress || []
-    
-    console.log(`📊 学生 ${studentId} 的进度数据:`, progress)
-  } catch (error) {
-    console.error('加载学生数据失败:', error)
-    ElMessage.error('加载数据失败')
-  }
+const goPractice = () => {
+  router.push('/teacher/practice')
 }
 
-const submitFeedback = async (writingId) => {
-  const feedback = feedbackForm[writingId]
-  if (!feedback?.trim()) {
-    ElMessage.warning('请输入批改意见')
-    return
-  }
+const goMyBooks = () => {
+  router.push('/teacher/books')
+}
 
-  submittingFeedback[writingId] = true
+const goNewBook = () => {
+  router.push('/teacher/books/new')
+}
+
+const showComingSoon = () => {
+  ElMessage.info('功能开发中，敬请期待！')
+}
+
+// 获取内容预览
+const getPreview = (content) => {
+  if (!content) return ''
+  return content.length > 100 ? content.substring(0, 100) + '...' : content
+}
+
+// 跳转到范文详情（功能待开发）
+const goToEssayDetail = (id) => {
+  ElMessage.info('范文详情功能开发中，敬请期待！')
+}
+
+// 加载每日推荐
+const loadDailyRecommendations = async () => {
+  loadingEssays.value = true
   try {
-    await teacherAPI.submitFeedback(writingId, feedback)
-    ElMessage.success('批改提交成功')
+    console.log('[教师端] 开始加载每日推荐...')
+    const response = await sampleEssayAPI.getAllEssays()
+    console.log('[教师端] 每日推荐响应:', response)
+    dailyRecommendations.value = Array.isArray(response) ? response : []
+    console.log('[教师端] 每日推荐数据:', dailyRecommendations.value)
   } catch (error) {
-    ElMessage.error('提交失败')
+    console.error('加载每日推荐失败:', error)
+    console.error('错误详情:', error.response || error.message)
+    ElMessage.error('加载每日推荐失败: ' + (error.response?.data?.message || error.message))
   } finally {
-    submittingFeedback[writingId] = false
+    loadingEssays.value = false
   }
 }
 
-const sendEncouragement = async () => {
-  if (!encouragementContent.value.trim()) {
-    ElMessage.warning('请输入激励内容')
-    return
-  }
-
-  sendingEncouragement.value = true
+// 加载收藏榜单
+const loadFavoriteList = async () => {
+  loadingFavorites.value = true
   try {
-    await teacherAPI.sendEncouragement(
-      selectedStudent.value.id,
-      encouragementContent.value
-    )
-    ElMessage.success('激励语发送成功')
-    showEncouragementDialog.value = false
-    encouragementContent.value = ''
+    console.log('[教师端] 开始加载收藏榜单...')
+    const response = await sampleEssayAPI.getTopFavoriteEssays()
+    console.log('[教师端] 收藏榜单响应:', response)
+    favoriteList.value = Array.isArray(response) ? response : []
+    console.log('[教师端] 收藏榜单数据:', favoriteList.value)
   } catch (error) {
-    ElMessage.error('发送失败')
+    console.error('加载收藏榜单失败:', error)
+    console.error('错误详情:', error.response || error.message)
+    ElMessage.error('加载收藏榜单失败: ' + (error.response?.data?.message || error.message))
   } finally {
-    sendingEncouragement.value = false
+    loadingFavorites.value = false
   }
 }
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('zh-CN')
-}
-
-const bindStudent = async () => {
-  if (!bindForm.value.studentUsername.trim()) {
-    ElMessage.warning('请输入学生的用户名')
-    return
-  }
-
-  bindingStudent.value = true
+// 登出功能
+const handleLogout = async () => {
   try {
-    await bindingAPI.teacherBindStudent(bindForm.value.studentUsername)
-    ElMessage.success('绑定成功！')
-    showBindDialog.value = false
-    bindForm.value.studentUsername = ''
-    
-    // 重新加载学生列表
-    await loadStudents()
+    await userStore.logout()
+    router.push('/login')
   } catch (error) {
-    ElMessage.error('绑定失败：' + (error.response?.data?.message || error.message))
-  } finally {
-    bindingStudent.value = false
-  }
-}
-
-const loadStudents = async () => {
-  try {
-    const data = await teacherAPI.getStudents()
-    students.value = data || []
-  } catch (error) {
-    console.error('加载学生列表失败:', error)
+    console.error('登出失败:', error)
+    ElMessage.error('登出失败')
   }
 }
 
 onMounted(() => {
-  loadStudents()
+  loadDailyRecommendations()
+  loadFavoriteList()
+})
+
+onUnmounted(() => {
+  // 清理函数
 })
 </script>
 
 <style scoped>
 .teacher-dashboard {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.student-item {
-  padding: 15px;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.3s;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  border: 1px solid #ebeef5;
+  min-height: 100vh;
+  background: #f0f2f5;
 }
 
-.student-item:hover {
-  background: #f5f7fa;
-  transform: translateX(5px);
-}
-
-.student-item.active {
-  background: #ecf5ff;
-  border-color: #409eff;
-}
-
-.student-info {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.student-details {
+/* 左侧导航栏 */
+.left-navbar {
+  width: 200px;
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  color: #ecf0f1;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  overflow-y: auto;
 }
 
-.student-name {
+.nav-header {
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  background: rgba(52, 73, 94, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.username {
+  font-weight: 600;
+  color: #ffffff;
+  font-size: 16px;
+}
+
+.logout-link {
+  color: #87ceeb;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.3s ease;
+  cursor: pointer;
+}
+
+.logout-link:hover {
+  color: #b0e0e6;
+  text-decoration: underline;
+}
+
+.nav-menu {
+  flex: 1;
+  border: none;
+}
+
+.nav-badge {
+  margin-left: 8px;
+}
+
+/* 右侧内容区 */
+.content-area {
+  flex: 1;
+  margin-left: 200px;
+  padding: 20px;
+  max-width: calc(100% - 200px);
+}
+
+/* 推荐卡片样式 */
+.section-title {
+  font-size: 20px;
   font-weight: bold;
+  margin-bottom: 20px;
   color: #303133;
 }
 
-.student-stats {
-  font-size: 12px;
-  color: #909399;
+.recommendation-card-col {
+  margin-bottom: 20px;
 }
 
-.empty-state {
+.recommendation-card {
+  height: 280px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.recommendation-card:hover {
+  transform: translateY(-4px);
+}
+
+.card-content {
+  height: 100%;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 400px;
+  flex-direction: column;
 }
 
-.card-header-flex {
+.card-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+  margin: 0 0 8px 0;
+}
+
+.card-author {
+  font-size: 13px;
+  color: #909399;
+  margin: 0 0 12px 0;
+}
+
+.card-preview {
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.6;
+  margin: 0 0 8px 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: 12px;
 }
 
-.writing-title {
-  flex: 1;
-}
-
-.writing-content {
-  padding: 15px;
-}
-
-.essay-text, .ai-feedback {
-  line-height: 1.8;
-  color: #606266;
-  white-space: pre-wrap;
-}
-
-.ai-feedback {
-  color: #409eff;
+.card-rating {
+  font-size: 13px;
+  color: #909399;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 @media (max-width: 768px) {
-  .el-col {
-    margin-bottom: 20px;
+  .left-navbar {
+    width: 100%;
+    position: relative;
+  }
+  
+  .content-area {
+    margin-left: 0;
+    max-width: 100%;
+  }
+  
+  .recommendation-card-col {
+    margin-bottom: 15px;
   }
 }
 </style>

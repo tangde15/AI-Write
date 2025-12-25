@@ -18,14 +18,15 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody RegisterRequest req) {
-        userService.register(req.getUsername(), req.getPassword(), req.getRole());
+        userService.register(req.getUsername(), req.getAccount(), req.getPassword(), req.getRole(), 
+                            req.getEducationLevel(), req.getGrade());
         return ResponseEntity.ok("注册成功");
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req, HttpSession session) {
-        System.out.println("[Auth] 登录请求 - 用户名: '" + req.getUsername() + "', 角色: '" + req.getRole() + "'");
-        UserAccount user = userService.verify(req.getUsername(), req.getPassword());
+        System.out.println("[Auth] 登录请求 - 账号: '" + req.getAccount() + "', 角色: '" + req.getRole() + "'");
+        UserAccount user = userService.verify(req.getAccount(), req.getPassword());
         System.out.println("[Auth] 用户查询结果: " + (user != null ? "找到用户" : "未找到用户"));
         if (user != null) {
             // 验证用户角色是否匹配
@@ -43,7 +44,7 @@ public class AuthController {
             );
             return ResponseEntity.ok(response);
         }
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("用户名或密码错误");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("账号或密码错误");
     }
 
     @GetMapping("/me")

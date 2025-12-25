@@ -7,6 +7,15 @@
         <span class="brand-text">AI五感作文训练平台</span>
       </div>
 
+      <!-- 功能按钮 -->
+      <div class="navbar-actions">
+        <div class="message-menu-item" @click="goToChat">
+          <el-icon class="menu-icon"><ChatDotRound /></el-icon>
+          <span class="menu-text">聊天</span>
+          <el-badge :value="unreadCount" v-if="unreadCount > 0" class="menu-badge" />
+        </div>
+      </div>
+
       <!-- 用户信息 -->
       <div class="navbar-user">
         <el-dropdown trigger="click" @command="handleCommand">
@@ -39,15 +48,19 @@
 </template>
 
 <script setup>
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
+import { messageAPI } from '@/api/message'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { 
-  Edit, ArrowDown, User, Setting, SwitchButton 
+  Edit, ArrowDown, User, Setting, SwitchButton, ChatDotRound 
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
+const unreadCount = ref(0)
+let pollInterval = null
 
 const getRoleText = () => {
   const roleMap = {
@@ -85,6 +98,31 @@ const handleCommand = async (command) => {
     ElMessage.info('个人设置功能开发中...')
   }
 }
+
+const goToChat = () => {
+  router.push('/chat')
+}
+
+const loadUnreadCount = async () => {
+  try {
+    const count = await messageAPI.getUnreadCount()
+    unreadCount.value = count || 0
+  } catch (error) {
+    console.error('加载未读数失败:', error)
+  }
+}
+
+onMounted(() => {
+  loadUnreadCount()
+  // 每30秒更新一次
+  pollInterval = setInterval(loadUnreadCount, 30000)
+})
+
+onUnmounted(() => {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+  }
+})
 </script>
 
 <style scoped>
@@ -121,6 +159,42 @@ const handleCommand = async (command) => {
   font-weight: bold;
   color: #fff;
   letter-spacing: 1px;
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.message-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: rgba(44, 62, 80, 0.8);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.message-menu-item:hover {
+  background: rgba(44, 62, 80, 1);
+}
+
+.menu-icon {
+  color: #fff;
+  font-size: 18px;
+}
+
+.menu-text {
+  color: #fff;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.menu-badge {
+  margin-left: 8px;
 }
 
 .navbar-user {

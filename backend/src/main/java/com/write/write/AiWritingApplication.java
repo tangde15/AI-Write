@@ -2,6 +2,7 @@ package com.write.write;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 /**
  * 项目主启动类
@@ -13,9 +14,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * 功能模块：
  *  - 学生端：作文提交 / AI反馈 / 激励语展示
  *  - 教师端：学生作文查看 / 人工批改 / 写作进步统计
- *  - 家长端：查看孩子成长曲线 / 激励语发送与查看
  */
 @SpringBootApplication
+@EnableAsync
 public class AiWritingApplication {
 
     public static void main(String[] args) {

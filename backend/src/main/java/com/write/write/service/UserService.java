@@ -15,21 +15,27 @@ public class UserService {
     private final UserRepository userRepository;
 
     /** 用户注册 **/
-    public void register(String username, String password, String role) {
+    public void register(String username, String account, String password, String role, String educationLevel, String grade) {
         if (userRepository.findByUsername(username).isPresent()) {
             throw new RuntimeException("用户名已存在");
         }
+        if (userRepository.findByAccount(account).isPresent()) {
+            throw new RuntimeException("账号已存在");
+        }
         UserAccount user = new UserAccount();
         user.setUsername(username);
+        user.setAccount(account);
         // 使用BCrypt加密密码
         user.setPassword(BCrypt.hashpw(password, BCrypt.gensalt()));
         user.setRole(role != null ? role.toUpperCase() : "STUDENT");
+        user.setEducationLevel(educationLevel);
+        user.setGrade(grade);
         userRepository.save(user);
     }
 
-    /** 用户验证 **/
-    public UserAccount verify(String username, String password) {
-        return userRepository.findByUsername(username)
+    /** 用户验证（使用account登录） **/
+    public UserAccount verify(String account, String password) {
+        return userRepository.findByAccount(account)
                 .filter(u -> checkPassword(password, u.getPassword()))
                 .orElse(null);
     }
@@ -60,5 +66,12 @@ public class UserService {
         boolean plainMatch = Objects.equals(trimmedStored, trimmedRaw);
         System.out.println("[Auth] Plain match=" + plainMatch);
         return plainMatch;
+    }
+
+    /**
+     * 根据用户名查找用户
+     */
+    public java.util.Optional<UserAccount> findByUsername(String username) {
+        return userRepository.findByUsername(username);
     }
 }

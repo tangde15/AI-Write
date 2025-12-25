@@ -19,5 +19,10 @@ export const studentAPI = {
   // 获取学生收到的激励语
   getEncouragements() {
     return api.get('/student/encouragements')
+  },
+
+  // 获取当前学生已绑定的教师列表
+  getBoundTeachers() {
+    return api.get('/student/bound-teachers')
   }
 }

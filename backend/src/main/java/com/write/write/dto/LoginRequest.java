@@ -7,7 +7,7 @@ import lombok.Data;
  */
 @Data
 public class LoginRequest {
-    private String username;
+    private String account;
     private String password;
     private String role; // 用户选择的角色（用于验证）
 }

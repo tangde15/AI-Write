@@ -61,6 +61,23 @@
             <artifactId>jbcrypt</artifactId>
             <version>0.4</version> <!-- 最新稳定版，可自行更新 -->
         </dependency>
+        <!-- WebSocket 依赖 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+        <!-- SockJS 依赖（WebSocket降级方案） -->
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>sockjs-client</artifactId>
+            <version>1.5.1</version>
+        </dependency>
+        <!-- STOMP 客户端库（可选） -->
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>stomp-websocket</artifactId>
+            <version>2.3.4</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -72,14 +89,14 @@
                 <configuration>
                     <source>17</source> <!-- 你的JDK版本 -->
                     <target>17</target>
-                    <annotationProcessorPaths>
-                        <!-- 在这里指定Lombok作为注解处理器 -->
+                    <!--<annotationProcessorPaths>
+                        &lt;!&ndash; 在这里指定Lombok作为注解处理器 &ndash;&gt;
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                             <version>1.18.38</version>
                         </path>
-                    </annotationProcessorPaths>
+                    </annotationProcessorPaths>-->
                 </configuration>
             </plugin>
             <plugin>
