@@ -4,10 +4,10 @@
 
 ![AI Writing Platform](https://img.shields.io/badge/AI-Writing%20Platform-blue?style=for-the-badge)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.5-green?style=for-the-badge)
-![Vue.js](https://img.shields.io/badge/Vue.js-3.3.4-4FC08D?style=for-the-badge)
-![MySQL](https://img.shields.io/badge/MySQL-8.0+-orange?style=for-the-badge)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.121.1-009688?style=for-the-badge)
+![Milvus](https://img.shields.io/badge/Milvus-2.6.6-00B4B6?style=for-the-badge)
 
-**基于AI技术的智能作文教学系统（学生/教师双端）**
+**基于 AI + 向量检索的智能作文教学系统（微服务架构）**
 
 [功能特性](#功能特性) • [快速开始](#快速开始) • [部署指南](#部署指南) • [API文档](#api文档)
 
@@ -15,19 +15,23 @@
 
 ## 📖 项目简介
 
-AI五感作文训练平台是一个创新的智能作文教学系统，通过AI技术帮助学生提升写作能力。系统采用前后端分离架构，当前支持学生与教师两种角色，形成完整的教学闭环。
+AI五感作文训练平台是一个创新的智能作文教学系统，采用**微服务架构**集成向量检索（Milvus）+ LLM（DeepSeek）技术，提供上下文感知的作文批改。系统支持学生与教师两种角色，形成完整的教学闭环。
 
 ### 🎯 核心价值
-- **智能化教学**: 利用AI技术提供个性化作文批改和指导
+- **RAG 批改**: 向量检索相似范文，结合 LLM 生成上下文感知的批改建议（含参考标注）
+- **五感训练**: 重点关注视觉、听觉、味觉、嗅觉、触觉的细节描写
 - **多角色协作**: 学生与教师协同，形成闭环教学
 - **数据驱动**: 通过学习进度跟踪，科学评估学生成长
-- **激励互动**: 教师与系统激励增强学习动力
 
 ## ✨ 功能特性
 
 ### 👨‍🎓 学生端
 - 📝 **智能写作**: 基于五感写作法进行作文创作
-- 🤖 **AI批改**: 实时获得AI反馈和改进建议
+- 🤖 **RAG 智能批改**: 
+  - ✅ 向量检索相似范文（Milvus，top-3）
+  - ✅ 基于范文进行上下文感知批改（DeepSeek LLM）
+  - ✅ 标注参考来源（【参考1】【参考2】【参考3】）
+  - ✅ 四维评分 + 三部分改进建议（问题→方向→做法）
 - 📊 **进度跟踪**: 可视化展示学习进步曲线
 - 🔄 **作文对比**: 与历史作文对比分析，AI从五感角度指出进步亮点
 - 💬 **接收激励**: 查看来自教师与系统的鼓励
@@ -44,66 +48,149 @@ AI五感作文训练平台是一个创新的智能作文教学系统，通过AI�
 ## 🚀 快速开始
 
 ### 环境要求
-- **JDK**: 17+
-- **Node.js**: 16+
-- **MySQL**: 8.0+
-- **Maven**: 3.6+
+| 组件 | 版本 | 说明 |
+|------|------|------|
+| JDK | 17+ | 位于 conda-env\Library\lib\jvm |
+| Python | 3.13 | 隔离虚拟环境 (python-rag-env) |
+| Node.js | 20+ | 内置于 conda-env |
+| MySQL | 8.0+ | 数据库服务 |
+| Milvus | 2.6.6 | Docker 容器（向量数据库）|
+| Docker | 最新 | Milvus 运行环境 |
 
-### 1️⃣ 克隆项目
+### 1️⃣ 初始化数据库
 ```bash
-git clone <repository-url>
-cd ai-writing-platform
-```
-
-### 2️⃣ 数据库配置
-```bash
-# 创建数据库
 mysql -u root -p < CREATE_DATABASE.sql
-
-# 导入表结构
-mysql -u root -p aiwriting < backend/src/main/resources/schema.sql
+mysql -u root -p aiwriting < insert-sample-essays.sql  # 可选：导入样本范文
 ```
 
-### 3️⃣ 后端配置
+### 2️⃣ 启动 Milvus（Docker）
 ```bash
-cd backend
-
-# 修改数据库配置
-# 注意：必须在 frontend 目录下执行
-npm run dev -- --host 0.0.0.0
-# 更新数据库连接信息和SiliconFlow API密钥
-
-# 启动后端服务
-mvn spring-boot:run
+cd E:\Project Practice\Write
+docker-compose up -d
+curl http://localhost:19530/healthz  # 验证连接
 ```
 
-### 4️⃣ 前端配置
-```bash
-cd frontend
-
-# 安装依赖
-npm install
-
-# 启动开发服务器
-npm run dev
-```
-
-### 5️⃣ 访问系统
-- 前端地址: http://localhost:5173
-- 后端API: http://localhost:8080
-
-### 6️⃣ 一键启动/停止（可选，推荐）
-在本机 Conda 前缀环境下，一键启动前后端：
-
+### 3️⃣ 初始化 Milvus 集合与导入范文
 ```powershell
-# 启动（并在后台运行前后端）
-& "E:\Project Practice\Write\scripts\start-full-stack.ps1" -EnvPrefix "E:\Project Practice\Write\conda-env"
+cd "E:\Project Practice\Write\rag-service"
+& "E:\Project Practice\Write\python-rag-env\Scripts\python.exe" init_milvus_collection.py
+& "E:\Project Practice\Write\python-rag-env\Scripts\python.exe" import_sample_essays.py
+```
 
-# 停止
+### 4️⃣ 配置 RAG 服务
+编辑 `rag-service/config.env`:
+```env
+SILICONFLO_API_KEY=your_api_key
+DEEPSEEK_API_KEY=your_api_key
+MILVUS_HOST=127.0.0.1
+MILVUS_PORT=19530
+MILVUS_DATABASE=Write
+```
+
+### 5️⃣ 启动三个服务
+
+**终端 1 - Spring Boot 后端（端口 8080）**
+```powershell
+cd "E:\Project Practice\Write\backend"
+$env:JAVA_HOME="E:\Project Practice\Write\conda-env\Library\lib\jvm"
+.\mvnw.cmd clean compile spring-boot:run -DskipTests
+```
+
+**终端 2 - Python RAG 微服务（端口 8001）**
+```powershell
+cd "E:\Project Practice\Write\rag-service"
+& "E:\Project Practice\Write\python-rag-env\Scripts\python.exe" -m uvicorn rag_service:app --host 0.0.0.0 --port 8001
+```
+
+**终端 3 - React 前端（端口 5173）**
+```powershell
+cd "E:\Project Practice\Write\frontend"
+npm run dev -- --host 0.0.0.0
+```
+
+### 6️⃣ 访问系统
+| 服务 | URL |
+|------|-----|
+| 前端 | http://localhost:5173 |
+| 后端 API | http://localhost:8080 |
+| RAG 服务 | http://localhost:8001/health |
+| Milvus | http://localhost:19530 |
+
+### 7️⃣ 一键启动/停止（可选）
+```powershell
+& "E:\Project Practice\Write\scripts\start-full-stack.ps1" -EnvPrefix "E:\Project Practice\Write\conda-env"
 & "E:\Project Practice\Write\scripts\stop-full-stack.ps1"
 ```
 
-脚本位置： [scripts/start-full-stack.ps1](scripts/start-full-stack.ps1) 、[scripts/stop-full-stack.ps1](scripts/stop-full-stack.ps1)
+---
+
+## 🏛️ 系统架构概览
+
+```
+学生提交作文
+    ↓
+Spring Boot WritingService
+    ↓
+[RAG 可用？] ──是──> RagClient (HTTP POST)
+    ├─[否]──> 降级到传统 AI 批改
+    ↓
+Python FastAPI RAG 服务（端口 8001）
+  ├─ 向量化作文（SiliconFlow API, dim=1024）
+  ├─ Milvus 向量检索（top-3 相似范文, COSINE 相似度）
+  ├─ 格式化参考材料
+  ├─ 填充提示词模板
+  └─ 调用 DeepSeek LLM
+    ↓
+批改反馈（含【参考1】【参考2】【参考3】）
+    ↓
+返回 WritingService → 解析评分 → 保存数据库
+```
+
+---
+
+## 📊 批改输出格式
+
+```
+评分：XX分
+
+**总体评价**
+作文整体评价（80字以内）
+
+**内容评分：XX/30分**
+主题立意、材料选择、充实程度评价（100字以内）
+
+**结构评分：XX/20分**
+结构、层次、衔接评价（80字以内）
+
+**语言评分：XX/30分**
+语言表达效果评价（100字以内）
+
+**创意评分：XX/20分**
+立意、选材、表达新颖性评价（80字以内）
+
+**修改建议**
+【问题】明确指出具体不足
+【方向】说明改进的大方向  
+【做法】给出具体可操作的方法和示例
+
+【问题】...
+【方向】...
+【做法】...
+```
+
+---
+
+## 🔧 故障排查
+
+| 问题 | 解决方案 |
+|------|--------|
+| Milvus 连接失败 | 确认 Docker 运行：`docker ps \| grep milvus` |
+| RAG 返回 422 | 检查字段名为 snake_case（essay_text 非 essayText） |
+| Java 环境错误 | 检查 .vscode/settings.json 的 java.home 路径需包含 /lib/jvm 后缀 |
+| Maven 写入 C 盘 | 配置 backend/.mvn/maven.config 的本地仓库路径 |
+| 代码改动未生效 | 执行 `mvn clean compile` 清理编译文件，重启 Spring Boot |
+
+---
 
 ## 🏗️ 项目结构
 
@@ -156,12 +243,21 @@ npm run dev
 - 构建：Maven；异步：`@EnableAsync` + `@Async`
 
 ### 前端
-- 框架：Vue 3 + Vite
-- UI：Element Plus；图表：ECharts
-- 路由：Vue Router；状态：Pinia
-- HTTP：Axios，开发代理可配
+- 框架：React 18 + Vite
+- 样式：Tailwind CSS
+- HTTP：Axios
+- 构建：Vite
 
-项目结构参考：[frontend/PROJECT_STRUCTURE.md](frontend/PROJECT_STRUCTURE.md)
+### 微服务（RAG）
+- 框架：FastAPI 0.121.1（异步 Web 框架）
+- 向量检索：Pymilvus 2.6.2（Milvus Python 客户端）
+- 服务器：Uvicorn 0.38.0（ASGI 服务器）
+- 语言：Python 3.13
+
+### 数据与 AI
+- Milvus 2.6.6 - 向量数据库（Docker）
+- DeepSeek API - LLM 服务
+- SiliconFlow API - 向量化服务（BAAI/bge-m3, dim=1024）
 
 ---
 
