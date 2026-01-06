@@ -250,6 +250,22 @@ async def generate_feedback(req: FeedbackRequest):
         
         logger.info(f"生成批改: 题目={req.topic}, 参考数={len(references)}")
         
+        # 【后台记录】调用 LLM 前记录本次使用的参考范文
+        logger.info(
+            "RAG 批改参考范文",
+            extra={
+                "essay_length": len(req.essay_text),
+                "topic": req.topic,
+                "references": [
+                    {
+                        "id": r["id"],
+                        "title": r["title"],
+                        "score": r["score"]
+                    } for r in references
+                ]
+            }
+        )
+        
         # 调用 LLM
         feedback = call_llm(prompt)
         
