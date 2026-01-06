@@ -251,19 +251,14 @@ async def generate_feedback(req: FeedbackRequest):
         logger.info(f"生成批改: 题目={req.topic}, 参考数={len(references)}")
         
         # 【后台记录】调用 LLM 前记录本次使用的参考范文
+        # 直接拼入 message，避免 extra 字段不显示的问题
+        references_summary = [
+            {"id": r["id"], "title": r["title"], "score": r["score"]}
+            for r in references
+        ]
         logger.info(
-            "RAG 批改参考范文",
-            extra={
-                "essay_length": len(req.essay_text),
-                "topic": req.topic,
-                "references": [
-                    {
-                        "id": r["id"],
-                        "title": r["title"],
-                        "score": r["score"]
-                    } for r in references
-                ]
-            }
+            f"RAG 批改参考范文: 字数={len(req.essay_text)}, 题目={req.topic}, "
+            f"参考={references_summary}"
         )
         
         # 调用 LLM
